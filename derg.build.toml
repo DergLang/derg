@@ -1,0 +1,6 @@
+version = "1.0.0pre"
+author = "KnownSH"
+
+[comp]
+semantic = "luau"
+from = "/std"
