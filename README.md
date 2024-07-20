@@ -7,3 +7,4 @@ Derg is a programming language built to transpile into readable and native-capab
 - **Performance:** Derg is intended to be a zero-cost programming language, meaning that the Luau code it transpiles to will be just as fast or even faster than hand-written Luau code.
 - **Readability:** Built for extensive projects, Derg expands on Luau's type system by implementing compile-time type creation, allowing for features such as `Partial<T>` to exist at no extra cost.
 
+Examples of the current Derg semantic can be found in the examples folder.
