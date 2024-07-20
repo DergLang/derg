@@ -3,7 +3,7 @@
 // why reinvent the wheel when zig already has a good tokenizer
 
 const std = @import("std");
-const Token = @import("token.zig");
+const Token = @import("token.zig").Token;
 
 pub const Tokenizer = struct {
     buffer: [:0]const u8,
@@ -27,6 +27,9 @@ pub const Tokenizer = struct {
         string_literal_double,
         string_literal_single,
         string_backslash,
+        equal,
+        bang,
+        question,
     };
 
     pub fn next(self: *Tokenizer) Token {
@@ -38,7 +41,7 @@ pub const Tokenizer = struct {
                 .end = undefined
             }
         };
-        var seen_escape_digits: usize = undefined;
+        //var seen_escape_digits: usize = undefined;
         while (true) : (self.index += 1) {
             const char = self.buffer[self.index];
             switch (state) {
@@ -71,7 +74,62 @@ pub const Tokenizer = struct {
                         state = .identifier;
                         token.tag = .identifier;
                     },
-                    
+                    '=' => {
+                        state = .equal;
+                    },
+                    '!' => {
+                        state = .bang;
+                    },
+                    '?' => {
+                        state = .question;
+                    },
+                },
+                .question => switch (char) {
+                    '?' => {
+                        token.tag = .question_mark_question_mark;
+                        self.index += 1;
+                        break;
+                    },
+                    else => {
+                        token.tag = .question_mark;
+                        break;
+                    }
+                },
+                .bang => switch (char) {
+                    '=' => {
+                        token.tag = .bang_equal;
+                        self.index += 1;
+                        break;
+                    },
+                    else => {
+                        token.tag = .bang;
+                        break;
+                    }
+                },
+                .equal => switch (char) {
+                    '=' => {
+                        token.tag = .is_equal;
+                        self.index += 1;
+                        break;
+                    },
+                    '>' => {
+                        token.tag = .equal_arrow;
+                        self.index += 1;
+                        break;
+                    },
+                    else => {
+                        token.tag = .equal;
+                        break;
+                    },
+                },
+                .identifier => switch (char) {
+                    'a'...'z', 'A'...'Z', '_', '0'...'9' => {},
+                    else => {
+                        if (Token.getKeyword(self.buffer[token.loc.start..self.index])) |tag| {
+                            token.tag = tag;
+                        }
+                        break;
+                    }
                 },
                 .string_literal_single => switch (char) {
                     // End char, newline
@@ -132,6 +190,12 @@ pub const Tokenizer = struct {
 
                         self.index += (std.unicode.utf8ByteSequenceLength(char) catch unreachable) - 1;
                     }
+                },
+                else => {
+                    token.tag = .invalid;
+                    token.loc.end = self.index;
+                    self.index += std.unicode.utf8ByteSequenceLength(char) catch 1;
+                    return token;
                 }
             }
         }
