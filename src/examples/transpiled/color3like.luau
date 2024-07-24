@@ -1,3 +1,4 @@
+--!TRANSPILED BY DERGLANG!
 --- A simple Color3 implementation
 
 type RGB = {
