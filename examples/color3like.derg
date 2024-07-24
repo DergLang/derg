@@ -10,7 +10,7 @@ export class Color3 : RGB {
     record new(R=0, G=0, B=0) {}
 
     -- metamethods
-    __add = (self, color) -> {
+    __add = (color) -> {
         R = Math.clamp(R + color.R, 0, 1)
         G = Math.clamp(G + color.G, 0, 1)
         B = Math.clamp(B + color.B, 0, 1)
