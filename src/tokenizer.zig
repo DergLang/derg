@@ -3,7 +3,234 @@
 // why reinvent the wheel when zig already has a good tokenizer
 
 const std = @import("std");
-const Token = @import("token.zig").Token;
+
+pub const Token = struct {
+    tag: Tag,
+    loc: Loc,
+
+    pub const Loc = struct {
+        start: usize,
+        end: usize
+    };
+
+    pub fn getKeyword(bytes: []const u8) ?Tag {
+        return keywords.get(bytes);
+    }
+
+    pub const Tag = enum {
+        invalid,
+        eof,
+        identifier,
+        string_literal,
+        multiline_string_literal,
+        l_bracket,
+        r_bracket,
+        l_brace,
+        r_brace,
+        l_paren,
+        r_paren,
+        equal,
+        is_equal,
+        bang_equal,
+        period,
+        tilde,
+        bang,
+        semicolon,
+        comment,
+        important_comment,
+        number_literal,
+        question_mark,
+        question_mark_question_mark,
+        ampersand,
+        comma,
+        arrow,
+        equal_arrow,
+        colon,
+        caret,
+        caret_equal,
+        plus_plus,
+        minus_minus,
+        slash,
+        backslash,
+        pipe,
+        asterisk,
+        asterisk_equal,
+        plus,
+        plus_equal,
+        minus,
+        minus_equal,
+        percent,
+        percent_equal,
+        ellipsis,
+        slash_equal,
+        slash_slash,
+        slash_slash_equal,
+        angle_bracket_left,
+        angle_bracket_right,
+        angle_bracket_left_equal,
+        angle_bracket_right_equal,
+        kwd_if,
+        kwd_local,
+        kwd_const,
+        kwd_import,
+        kwd_export,
+        kwd_break,
+        kwd_continue,
+        kwd_else,
+        kwd_elseif,
+        kwd_for,
+        kwd_while,
+        kwd_not,
+        kwd_fn,
+        kwd_and,
+        kwd_or,
+        kwd_self,
+        kwd_type,
+        kwd_is,
+        kwd_return,
+        kwd_luau,
+        kwd_error,
+        kwd_warn,
+        kwd_defer,
+        kwd_await,
+        kwd_try,
+        kwd_catch,
+        kwd_class,
+        kwd_trait,
+        kwd_record,
+
+        pub fn lexeme(tag: Tag) ?[]const u8 {
+            return switch (tag) {
+                .invalid,
+                .identifier,
+                .string_literal,
+                .multiline_string_literal,
+                .eof,
+                .number_literal,
+                .comment,
+                .important_comment,
+                => null,
+
+                .l_bracket => '[',
+                .r_bracket => ']',
+                .l_brace => '{',
+                .r_brace => '}',
+                .l_paren => '(',
+                .r_paren => ')',
+                .equal => '=',
+                .equal_arrow => "=>",
+                .is_equal => "==",
+                .bang_equal => "!=",
+                .period => '.',
+                .tilde => '~',
+                .bang => '!',
+                .semicolon => ';',
+                .question_mark => '?',
+                .question_mark_question_mark => "??",
+                .ampersand => '&',
+                .arrow => "->",
+                .colon => ':',
+                .caret => '^',
+                .caret_equal => "^=",
+                .plus_plus => "++",
+                .minus_minus => "--",
+                .slash => '/',
+                .backslash => '\\',
+                .pipe => "|>",
+                .asterisk => '*',
+                .asterisk_equal => "*=",
+                .plus => '+',
+                .plus_equal => "+=",
+                .minus => '-',
+                .minus_equal => "-=",
+                .percent => '%',
+                .percent_equal => "%=",
+                .ellipsis => "...",
+                .slash_equal => "/=",
+                .slash_slash => "//",
+                .slash_slash_equal => "//=",
+                .angle_bracket_left => '<',
+                .angle_bracket_right => '>',
+                .angle_bracket_left_equal => ">=",
+                .angle_bracket_right_equal => "<=",
+
+                .kwd_if => "if",
+                .kwd_local => "local",
+                .kwd_const => "const",
+                .kwd_import => "import",
+                .kwd_export => "export",
+                .kwd_break => "break",
+                .kwd_continue => "contiune",
+                .kwd_else => "else",
+                .kwd_elseif => "elseif",
+                .kwd_for => "for",
+                .kwd_while => "while",
+                .kwd_not => "not",
+                .kwd_fn => "fn",
+                .kwd_and => "and",
+                .kwd_or => "or",
+                .kwd_self => "self",
+                .kwd_type => "type",
+                .kwd_is => "is",
+                .kwd_return => "return",
+                .kwd_luau => "luau",
+                .kwd_error => "error",
+                .kwd_warn => "warn",
+                .kwd_defer => "defer",
+                .kwd_await => "await",
+                .kwd_try => "try",
+                .kwd_catch => "catch",
+                .kwd_class => "class",
+                .kwd_trait => "trait",
+                .kwd_record => "record"
+            };
+        }
+
+        pub fn symbol(tag: Tag) []const u8 {
+            return tag.lexeme() orelse switch (tag) {
+                .invalid => "invalid bytes",
+                .identifier => "an identifier",
+                .string_literal, .multiline_string_literal => "a string literal",
+                .eof => "end of file",
+                .number_literal => "a number literal",
+                .comment, .important_comment => "a comment",
+                else => unreachable
+            };
+        }
+    };
+};
+
+pub const keywords = std.StaticStringMap(Token.Tag).initComptime(.{
+    .{ "if", .kwd_if },
+    .{ "local", .kwd_local },
+    .{ "const", .kwd_const },
+    .{ "import", .kwd_import },
+    .{ "export", .kwd_export },
+    .{ "break", .kwd_break },
+    .{ "continue", .kwd_continue },
+    .{ "else", .kwd_else },
+    .{ "elseif", .kwd_elseif },
+    .{ "for", .kwd_for },
+    .{ "while", .kwd_while },
+    .{ "not", .kwd_not },
+    .{ "fn", .kwd_fn },
+    .{ "and", .kwd_and },
+    .{ "or", .kwd_or },
+    .{ "self", .kwd_self },
+    .{ "type", .kwd_type },
+    .{ "is", .kwd_is },
+    .{ "return", .kwd_return },
+    .{ "luau", .kwd_luau },
+    .{ "error", .kwd_error },
+    .{ "warn", .kwd_warn },
+    .{ "defer", .kwd_defer },
+    .{ "await", .kwd_await },
+    .{ "try", .kwd_try },
+    .{ "catch", .kwd_catch },
+    .{ "class", .kwd_class },
+    .{ "trait", .kwd_trait },
+    .{ "record", .kwd_record }
+});
 
 pub const Tokenizer = struct {
     buffer: [:0]const u8,
@@ -83,6 +310,12 @@ pub const Tokenizer = struct {
                     '?' => {
                         state = .question;
                     },
+                    else => {
+                        token.tag = .invalid;
+                        token.loc.end = self.index;
+                        self.index += std.unicode.utf8ByteSequenceLength(char) catch 1;
+                        return token;
+                    }
                 },
                 .question => switch (char) {
                     '?' => {
@@ -247,3 +480,19 @@ pub const Tokenizer = struct {
         }
     }
 };
+
+test "keywords" {
+    try testTokenize("fn local const else", &.{.kwd_fn, .kwd_local, .kwd_const, .kwd_else});
+}
+
+fn testTokenize(source: [:0]const u8, expected_token_tags: []const Token.Tag) !void {
+    var tokenizer = Tokenizer.new(source);
+    for (expected_token_tags) |expected_token_tag| {
+        const token = tokenizer.next();
+        try std.testing.expectEqual(expected_token_tag, token.tag);
+    }
+    const last_token = tokenizer.next();
+    try std.testing.expectEqual(Token.Tag.eof, last_token.tag);
+    try std.testing.expectEqual(source.len, last_token.loc.start);
+    try std.testing.expectEqual(source.len, last_token.loc.end);
+}
