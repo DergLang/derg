@@ -98,6 +98,8 @@ pub const Token = struct {
         kwd_class,
         kwd_trait,
         kwd_record,
+        kwd_true,
+        kwd_false,
 
         pub fn lexeme(tag: Tag) ?[]const u8 {
             return switch (tag) {
@@ -182,7 +184,9 @@ pub const Token = struct {
                 .kwd_catch => "catch",
                 .kwd_class => "class",
                 .kwd_trait => "trait",
-                .kwd_record => "record"
+                .kwd_record => "record",
+                .kwd_true => "true",
+                .kwd_false => "false"
             };
         }
 
@@ -229,7 +233,9 @@ pub const keywords = std.StaticStringMap(Token.Tag).initComptime(.{
     .{ "catch", .kwd_catch },
     .{ "class", .kwd_class },
     .{ "trait", .kwd_trait },
-    .{ "record", .kwd_record }
+    .{ "record", .kwd_record },
+    .{ "true", .kwd_true },
+    .{ "false", .kwd_false },
 });
 
 pub const Tokenizer = struct {
@@ -256,6 +262,12 @@ pub const Tokenizer = struct {
         string_backslash,
         equal,
         bang,
+        number,
+        number_exponent,
+        float,
+        float_exponent,
+        period,
+        pipe,
         question,
     };
 
@@ -301,20 +313,114 @@ pub const Tokenizer = struct {
                         state = .identifier;
                         token.tag = .identifier;
                     },
-                    '=' => {
-                        state = .equal;
+                    '0'...'9' => {
+                        state = .number;
+                        token.tag = .number_literal;
                     },
-                    '!' => {
-                        state = .bang;
+                    '=' => state = .equal,
+                    '!' => state = .bang,
+                    '?' => state = .question,
+                    '|' => state = .pipe,
+                    '.' => state = .period,
+                    '(' => {
+                        token.tag = .l_paren;
+                        self.index += 1;
+                        break;
                     },
-                    '?' => {
-                        state = .question;
+                    ')' => {
+                        token.tag = .r_paren;
+                        self.index += 1;
+                        break;
+                    },
+                    '[' => {
+                        token.tag = .l_bracket;
+                        self.index += 1;
+                        break;
+                    },
+                    ']' => {
+                        token.tag = .r_bracket;
+                        self.index += 1;
+                        break;
+                    },
+                    ';' => {
+                        token.tag = .semicolon;
+                        self.index += 1;
+                        break;
+                    },
+                    ',' => {
+                        token.tag = .comma;
+                        self.index += 1;
+                        break;
+                    },
+                    ':' => {
+                        token.tag = .colon;
+                        self.index += 1;
+                        break;
+                    },
+                    '{' => {
+                        token.tag = .l_brace;
+                        self.index += 1;
+                        break;
+                    },
+                    '}' => {
+                        token.tag = .r_brace;
+                        self.index += 1;
+                        break;
                     },
                     else => {
                         token.tag = .invalid;
                         token.loc.end = self.index;
                         self.index += std.unicode.utf8ByteSequenceLength(char) catch 1;
                         return token;
+                    }
+                },
+                .period => switch (char) {
+                    '0'...'9' => {
+                        state = .float;
+                    },
+                    else => {
+                        token.tag = .period;
+                        break;
+                    }
+                },
+                .number => switch (char) {
+                    '.' => {
+                        state = .float;
+                    },
+                    '0'...'9', 'a'...'d', 'f', 'A'...'D', 'F', '_', 'x', 'X' => {},
+                    'e', 'E', => state = .float_exponent,
+                    else => break
+                },
+                .number_exponent => switch (char) {
+                    '-', '+' => {
+                        state = .float;
+                    },
+                    else => {
+                        self.index -= 1;
+                        state = .number;
+                    },
+                },
+                .float => switch (char) {
+                    '0'...'9', 'a'...'d', 'f', 'A'...'D', 'F', '_', => {},
+                    'e', 'E', => state = .float_exponent,
+                    else => break
+                },
+                .float_exponent => switch (char) {
+                    '+', '-' => state = .float,
+                    else => {
+                        self.index -= 1;
+                        state = .float;
+                    },
+                },
+                .pipe => switch (char) {
+                    '>' => {
+                        token.tag = .pipe;
+                        self.index += 1;
+                        break;
+                    },
+                    else => {
+                        token.tag = .invalid;
+                        break;
                     }
                 },
                 .question => switch (char) {
@@ -483,6 +589,11 @@ pub const Tokenizer = struct {
 
 test "keywords" {
     try testTokenize("fn local const else", &.{.kwd_fn, .kwd_local, .kwd_const, .kwd_else});
+}
+
+test "numbers" {
+    try testTokenize("4.94065645841246544177e-324", &.{.number_literal});
+    try testTokenize("0xABCDEFe+0.124434", &.{.number_literal});
 }
 
 fn testTokenize(source: [:0]const u8, expected_token_tags: []const Token.Tag) !void {
